@@ -4,7 +4,16 @@ import (
 	"fmt"
 )
 
-func AddConfig(configItem ConfigItem) error {
+func AddConfig(configItem ...ConfigItem) error {
+	for _, ci := range configItem {
+		if err := addConfig(ci); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func addConfig(configItem ConfigItem) error {
 	if !configItem.Level.isValid() {
 		return fmt.Errorf("Unknown severity level: %s. Allowed: INFO, WARNING, ERROR", configItem.Level)
 	}
