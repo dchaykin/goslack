@@ -102,7 +102,11 @@ func (m *message) isTimeout() bool {
 }
 
 func (m *message) update() {
-	m.avgSecondsBetweenMessages = (m.avgSecondsBetweenMessages*m.count + int(time.Now().Sub(m.timestamp))) / (m.count + 1)
+	if m.avgSecondsBetweenMessages == 0 {
+		m.avgSecondsBetweenMessages = int(time.Now().Sub(m.timestamp))
+	} else {
+		m.avgSecondsBetweenMessages = (m.avgSecondsBetweenMessages*m.count + int(time.Now().Sub(m.timestamp))) / (m.count + 1)
+	}
 	m.count++
 	m.timestamp = time.Now()
 }
