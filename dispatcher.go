@@ -22,23 +22,29 @@ type dispatcher struct {
 }
 
 func (d *dispatcher) removeOldMessages() {
-	for d.removeOneTimedoutMessage() {
+	for {
+		i := d.removeOneTimedoutMessage()
+		if i < 0 {
+			return
+		}
+		d.messages[i] = d.messages[len(d.messages)-1]
+		d.messages = d.messages[:len(d.messages)-1]
 	}
 }
 
-func (d *dispatcher) removeOneTimedoutMessage() bool {
+func (d *dispatcher) removeOneTimedoutMessage() int {
 	if d.messages == nil {
-		return false
+		return -1
 	}
 
-	for _, msg := range d.messages {
+	for i, msg := range d.messages {
 		if msg.isTimeout() {
 			msg.Level = solved
 			msg.send()
-			return true
+			return i
 		}
 	}
-	return false
+	return -1
 }
 
 func (d *dispatcher) findSameMessage(msg message) *message {
