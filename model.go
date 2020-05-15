@@ -123,7 +123,7 @@ func (m *message) isSameAgain(msg message) bool {
 		return false
 	}
 
-	secondsBeetweenMessages := int(m.timestamp.Unix() - msg.timestamp.Unix())
+	secondsBeetweenMessages := int(m.timestamp.Sub(msg.timestamp).Seconds())
 	isSecondMessageAndSendAgain := (m.avgSecondsBetweenMessages == 0 && secondsBeetweenMessages > minSecondsBetweenMessages)
 	isRepeatedMessageAndSendAgain := (m.avgSecondsBetweenMessages > 0 && secondsBeetweenMessages > (m.avgSecondsBetweenMessages+10))
 	return isSecondMessageAndSendAgain || isRepeatedMessageAndSendAgain

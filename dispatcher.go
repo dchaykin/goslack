@@ -15,7 +15,7 @@ func runDispatcher() {
 	}
 }
 
-const minSecondsBetweenMessages = 30 * 60
+const minSecondsBetweenMessages = 30
 
 type dispatcher struct {
 	messages []message
