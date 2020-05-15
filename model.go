@@ -91,7 +91,7 @@ type message struct {
 }
 
 func (m *message) isTimeout() bool {
-	secondsBeetweenMessages := int(m.timestamp.Unix() - m.timestamp.Unix())
+	secondsBeetweenMessages := int(time.Now().Unix() - m.timestamp.Unix())
 	if m.avgSecondsBetweenMessages == 0 && secondsBeetweenMessages > minSecondsBetweenMessages {
 		return true
 	}
