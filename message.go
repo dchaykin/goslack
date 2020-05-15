@@ -32,13 +32,7 @@ func send(content string, level severityLevel) error {
 	if configItem == nil {
 		return fmt.Errorf("No slack config for %s found", level)
 	}
-	msg := sender{
-		content: slackMessage{Text: content},
-	}
-	msg.Level = configItem.Level
-	msg.Push = configItem.Push
-	msg.URL = configItem.URL
-	return msg.send()
+	return disp.send(*configItem, content)
 }
 
 func Infof(text string, params ...interface{}) error {

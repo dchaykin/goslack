@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
+
+type severityLevel string
 
 var config = slackConfig{}
 
@@ -13,13 +16,63 @@ const (
 	info    = "INFO"
 	warning = "WARNING"
 	fault   = "ERROR"
+	solved  = "SOLVED"
 )
 
-type slackMessage struct {
-	Text string `json:"text"`
+type slackAttachment struct {
+	MrkDown []string `json:"mrkdwn_in"`
+	Text    string   `json:"text"`
+	Color   string   `json:"color"`
+	Title   string   `json:"pretext"`
 }
 
-type severityLevel string
+type slackMessage struct {
+	Attachments []slackAttachment `json:"attachments"`
+}
+
+func (sm *slackMessage) create(sl severityLevel, content string) {
+	sm.Attachments = []slackAttachment{
+		{
+			MrkDown: []string{"text"},
+			Color:   sm.getColorBySeveretyLevel(sl),
+			Text:    content,
+			Title:   sm.getTitleBySeveretyLevel(sl),
+		},
+	}
+}
+
+func (sm *slackMessage) getText() string {
+	if len(sm.Attachments) == 0 {
+		return ""
+	}
+	return sm.Attachments[0].Text
+}
+
+func (sm *slackMessage) getColorBySeveretyLevel(sl severityLevel) string {
+	switch sl {
+	case info, solved:
+		return "good"
+	case warning:
+		return "warning"
+	case fault:
+		return "danger"
+	}
+	return ""
+}
+
+func (sm *slackMessage) getTitleBySeveretyLevel(sl severityLevel) string {
+	switch sl {
+	case info:
+		return "Info:"
+	case warning:
+		return "Warning:"
+	case fault:
+		return "Error:"
+	case solved:
+		return "Solved:"
+	}
+	return ""
+}
 
 func (sl severityLevel) isValid() bool {
 	switch sl {
@@ -29,20 +82,57 @@ func (sl severityLevel) isValid() bool {
 	return false
 }
 
-type sender struct {
-	content slackMessage
+type message struct {
+	content                   slackMessage
+	timestamp                 time.Time
+	avgSecondsBetweenMessages int
+	count                     int
 	ConfigItem
 }
 
-func (s sender) send() error {
-	data, err := json.Marshal(s.content)
+func (m *message) isTimeout() bool {
+	secondsBeetweenMessages := int(m.timestamp.Unix() - m.timestamp.Unix())
+	if m.avgSecondsBetweenMessages == 0 && secondsBeetweenMessages > minSecondsBetweenMessages {
+		return true
+	}
+	if m.avgSecondsBetweenMessages > 0 && secondsBeetweenMessages+15 > m.avgSecondsBetweenMessages {
+		return true
+	}
+	return false
+}
+
+func (m *message) update() {
+	m.avgSecondsBetweenMessages = (m.avgSecondsBetweenMessages*m.count + int(time.Now().Sub(m.timestamp))) / (m.count + 1)
+	m.count++
+	m.timestamp = time.Now()
+}
+
+func (m *message) hasConfig(content slackMessage, cfg ConfigItem) bool {
+	return (m.content.getText() == content.getText() &&
+		m.Level == cfg.Level &&
+		m.URL == cfg.URL)
+}
+
+func (m *message) isSameAgain(msg message) bool {
+	if !m.hasConfig(msg.content, msg.ConfigItem) {
+		return false
+	}
+
+	secondsBeetweenMessages := int(m.timestamp.Unix() - msg.timestamp.Unix())
+	isSecondMessageAndSendAgain := (m.avgSecondsBetweenMessages == 0 && secondsBeetweenMessages > minSecondsBetweenMessages)
+	isRepeatedMessageAndSendAgain := (m.avgSecondsBetweenMessages > 0 && secondsBeetweenMessages > (m.avgSecondsBetweenMessages+10))
+	return isSecondMessageAndSendAgain || isRepeatedMessageAndSendAgain
+}
+
+func (m *message) send() error {
+	data, err := json.Marshal(m.content)
 	if err != nil {
 		return err
 	}
 
 	payload := bytes.NewReader(data)
 
-	req, err := http.NewRequest("POST", s.URL, payload)
+	req, err := http.NewRequest("POST", m.URL, payload)
 	if err != nil {
 		return err
 	}
