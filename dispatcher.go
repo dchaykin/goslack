@@ -15,7 +15,7 @@ func runDispatcher() {
 	}
 }
 
-const minSecondsBetweenMessages = 30
+const minSecondsBetweenMessages = 20 * 30
 
 type dispatcher struct {
 	messages []message
@@ -39,7 +39,7 @@ func (d *dispatcher) removeOneTimedoutMessage() int {
 
 	for i, msg := range d.messages {
 		if msg.isTimeout() {
-			msg.Level = solved
+			msg.setLevel(solved)
 			msg.send()
 			return i
 		}

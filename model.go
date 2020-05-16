@@ -95,7 +95,7 @@ func (m *message) isTimeout() bool {
 	if m.avgSecondsBetweenMessages == 0 && secondsBeetweenMessages > minSecondsBetweenMessages {
 		return true
 	}
-	if m.avgSecondsBetweenMessages > 0 && secondsBeetweenMessages+15 > m.avgSecondsBetweenMessages {
+	if m.avgSecondsBetweenMessages > 0 && secondsBeetweenMessages > m.avgSecondsBetweenMessages+15 {
 		return true
 	}
 	return false
@@ -129,6 +129,10 @@ func (m *message) isSameAgain(msg message) bool {
 	return isSecondMessageAndSendAgain || isRepeatedMessageAndSendAgain
 }
 
+func (m *message) setLevel(sl severityLevel) {
+	m.content.create(sl, m.content.getText())
+}
+
 func (m *message) send() error {
 	data, err := json.Marshal(m.content)
 	if err != nil {
@@ -158,6 +162,12 @@ func (m *message) send() error {
 	return nil
 }
 
+// ConfigItem describes a configuration for sending slack messages
+// For example, ConfigItem{Level: "ERROR", URL:"https://hooks.slack.com/services/TT12345/B012345/INFO123456"}
+// Adding this ConfigItem (see goslack.AddConfig) will trigger a new message to the slack channel every time,
+// if goslack.Errorf() is called.
+// Allowed levels are "INFO", "WARNING" and "ERROR"
+// See also goslack.AddConfig()
 type ConfigItem struct {
 	Level severityLevel `json:"level"`
 	URL   string        `json:"slack_url"`
@@ -168,10 +178,19 @@ type slackConfig struct {
 	config []ConfigItem
 }
 
-func (sc *slackConfig) getItemByLevel(level severityLevel) *ConfigItem {
+func (sc *slackConfig) getItemsByLevel(level severityLevel) (result []ConfigItem) {
+	for i := range sc.config {
+		if sc.config[i].Level == level {
+			result = append(result, sc.config[i])
+		}
+	}
+	return result
+}
+
+func (sc *slackConfig) getItem(level severityLevel, url string) *ConfigItem {
 	for i := range config.config {
-		if config.config[i].Level == level {
-			return &(config.config[i])
+		if sc.config[i].Level == level && sc.config[i].URL == url {
+			return &sc.config[i]
 		}
 	}
 	return nil
