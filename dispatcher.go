@@ -66,7 +66,7 @@ func (d *dispatcher) findMessageWithConfig(msg message) *message {
 	}
 
 	for i := range d.messages {
-		if !d.messages[i].hasConfig(msg.content, msg.ConfigItem) {
+		if d.messages[i].hasConfig(msg.content, msg.ConfigItem) {
 			return &d.messages[i]
 		}
 	}
