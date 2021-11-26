@@ -53,7 +53,7 @@ func (d *dispatcher) findSameMessage(msg message) *message {
 	}
 
 	for i := range d.messages {
-		if !d.messages[i].isSameAgain(msg) {
+		if d.messages[i].isSameAgain(msg) {
 			return &d.messages[i]
 		}
 	}
