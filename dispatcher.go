@@ -40,7 +40,9 @@ func (d *dispatcher) removeOneTimedoutMessage() int {
 	for i, msg := range d.messages {
 		if msg.isTimeout() {
 			msg.setLevel(solved)
-			msg.send()
+			if msg.Level == fault {
+				msg.send()
+			}
 			return i
 		}
 	}
